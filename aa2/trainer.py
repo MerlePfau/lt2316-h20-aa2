@@ -1,16 +1,15 @@
 import os
 import torch
 from torch import optim
-
-device = torch.device('cuda:1')
-
+import torch.nn as nn
+from torch.autograd import Variable
 
 class Batcher:
     def __init__(self, X, y, device, batch_size=50, max_iter=None):
         self.X = X
         self.y = y
         self.device = device
-        self.batch_size=batch_size
+        self.batch_size = batch_size
         self.max_iter = max_iter
         self.curr_iter = 0
         
@@ -29,17 +28,17 @@ class Batcher:
         self.curr_iter += 1
         return zip(splitX, splity)
     
+    
 
 class Trainer:
-
 
     def __init__(self, dump_folder="/tmp/aa2_models/"):
         self.dump_folder = dump_folder
         os.makedirs(dump_folder, exist_ok=True)
-        self.epochs = 1
+        self.epochs = 50
+        self.device = torch.device('cuda:3')
         
-
-
+        
     def save_model(self, epoch, model, optimizer, loss, scores, hyperparamaters, model_name):
         # epoch = epoch
         # model =  a train pytroch model
@@ -77,26 +76,56 @@ class Trainer:
 
     def train(self, train_X, train_y, val_X, val_y, model_class, hyperparamaters):
         # Finish this function so that it set up model then trains and saves it.
+        
         self.batch_size = hyperparamaters['batch_size']
         self.lr = hyperparamaters['learning_rate']
-        b = Batcher(train_X, train_y, device, batch_size=self.batch_size, max_iter=self.epochs)
+        nlayers = hyperparamaters['number_layers']
+        b = Batcher(train_X, train_y, self.device, batch_size=self.batch_size, max_iter=self.epochs)
+        input_s = self.batch_size, train_X.shape[1], train_X.shape[2]
+        output_s = self.batch_size, train_y.shape[1]
+        m = model_class(train_X.shape[2], nlayers, 1000, 103, self.device)
+        m = m.to(self.device)    
+        
+        m.train()
         self.val_X=val_X
         self.val_y=val_y
-        optimizer = optim.SGD(model_class.parameters(), lr=self.lr)
+        optimizer = optim.Adam(m.parameters(), lr=self.lr)
+        loss = nn.MSELoss()
         #self.optimizer=hyperparamaters['optimizer']
 
         for e in range(self.epochs):
+            #h = m.init_hidden(self.batch_size)
+#             print('batch:', train_X.size(), train_y.size())
+#             tot_loss = 0
+#             optimizer.zero_grad()
+#             o = m(train_X.float())
+#             l = loss(o, train_y.float())
+#             tot_loss += l
+#             l.backward()
+#             optimizer.step()
+#            print("Total loss in epoch {} is {}.".format(e, tot_loss))
             for split in b:
                 tot_loss = 0
-                for batch in split:
-                    optimizer.zero_grad()
-                    o = model_class(batch[0])
-                    l = loss(o.reshape(batch_size), batch[1])
-                    tot_loss += l
-                    l.backward()
-                    optimizer.step()
-            print("Total loss in epoch {} is {}.".format(epoch, tot_loss))
-        self.save_model()
+                for X, y in split:
+                    if(X.shape[0]==self.batch_size):
+                        optimizer.zero_grad()
+                        #X, y = Variable(torch.FloatTensor(X), requires_grad=False), Variable(torch.FloatTensor(y))
+                        o = m(X.float())
+                        #print(o)
+                        l = loss(o, y.float())
+                        tot_loss += l
+                        l.backward()
+                        optimizer.step()
+            print("Total loss in epoch {} is {}.".format(e, tot_loss))
+        accuracy = 0
+        recall = 0
+        scores = [accuracy, recall]
+#        self.save_model(e, m, optimizer, loss, scores, hyperparamaters, 'model_1')
+
+#         with torch.no_grad():
+#             tag_scores = m(train_X.float())
+#             print('output dim:', tag_scores.shape)
+#             print('scores', tag_scores)
         pass
 
 

@@ -185,7 +185,7 @@ class DataLoader(DataLoaderBase):
     def padding(self, lst):
         sample_len = len(lst)
         diff = self.max_sample_length - sample_len
-        padding = diff * [-1]
+        padding = diff * [5]
         lst.extend(padding)
 
         return lst[:self.max_sample_length]
@@ -213,7 +213,7 @@ class DataLoader(DataLoaderBase):
         else: 
             sentence = 0
         sent_labels = []
-        for t in id_tuples:
+        for i, t in enumerate(id_tuples):
             label = 0
             if t in label_tuples:
                 label = labels[label_tuples.index(t)]
@@ -236,7 +236,7 @@ class DataLoader(DataLoaderBase):
         # (NUMBER_SAMPLES, MAX_SAMPLE_LENGTH)
         # NOTE! the labels for each split should be on the GPU
         
-        device = torch.device('cuda:1')
+        device = torch.device('cuda:3')
         
         #prepare data for plotting and labeling
         #split the data_df into three sub df: train, val and test

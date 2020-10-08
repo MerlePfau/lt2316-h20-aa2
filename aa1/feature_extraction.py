@@ -15,7 +15,7 @@ def get_features(data, max_sample_length, id2word):
     all_list = []
     sent_list = []
     #turning the df into a feature df
-    for i in range(len(all_rows)):
+    for i in range(len(all_rows)-1):
         
         data_tuple = all_rows[i]
         #first features: left and right neighbour in the sentence
@@ -50,7 +50,7 @@ def get_features(data, max_sample_length, id2word):
         #fifth feature: word length
         word_len = end_id - start_id
 
-        word_list = [n_l, n_r, capital, all_caps, not_alpha]
+        word_list = [token_id, n_l, n_r, capital, all_caps, not_alpha]
         
         if i < len(all_rows)-1:
             if sent_id == all_rows[i+1][0]:
@@ -58,7 +58,7 @@ def get_features(data, max_sample_length, id2word):
             else:
                 len_sent = len(sent_list)
                 diff = max_sample_length - len_sent
-                padding = diff * [[-1] * len(word_list)]
+                padding = diff * [[0] * len(word_list)]
                 sent_list.extend(padding)
                 all_list.append(sent_list)
                 sent_list = []
@@ -66,7 +66,7 @@ def get_features(data, max_sample_length, id2word):
         else:
             len_sent = len(sent_list)
             diff = max_sample_length - len_sent
-            padding = diff * [[-1] * len(word_list)]
+            padding = diff * [[0] * len(word_list)]
             sent_list.extend(padding)
             all_list.append(sent_list)
             sent_list = []
