@@ -41,5 +41,5 @@ class LSTM_fixed_len(nn.Module) :
         lstm_out = self.dropout(lstm_out)
      
         output = self.linear(h[-1])
-        return output, hidden
+        return output
     
