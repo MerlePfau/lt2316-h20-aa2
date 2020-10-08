@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 from collections import Counter
 from venn import venn
+import nltk
 from nltk.tokenize import RegexpTokenizer
 
 
@@ -88,7 +89,7 @@ class DataLoader(DataLoaderBase):
         ner_id = 1
         word_id = 1
         #start reading in the files
-        for filename in filename_list[:100]:
+        for filename in filename_list:
             #get split from pathname and create validation set
             if 'Test' in str(filename):
                 split = 'test'
@@ -104,9 +105,8 @@ class DataLoader(DataLoaderBase):
                 sentence = elem.get("text")
                 sentence = sentence.replace(";"," ")
                 sentence = sentence.replace("/"," ")
-
                 tokenizer = RegexpTokenizer("\s|:|;", gaps=True)
-                tokenized = tokenizer.tokenize(sentence.lower())
+                tokenized = tokenizer.tokenize(sentence)
                 tokenized = [word.strip(punct) if word[-1] in punct else word for word in tokenized]
                 span = list(tokenizer.span_tokenize(sentence)) 
                 char_ids = []

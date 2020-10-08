@@ -2,7 +2,9 @@ import os
 import torch
 from torch import optim
 import torch.nn as nn
+import torchtext as tt
 from torch.autograd import Variable
+import numpy as np
 
 class Batcher:
     def __init__(self, X, y, device, batch_size=50, max_iter=None):
@@ -29,7 +31,6 @@ class Batcher:
         return zip(splitX, splity)
     
     
-
 class Trainer:
 
     def __init__(self, dump_folder="/tmp/aa2_models/"):
@@ -76,47 +77,36 @@ class Trainer:
 
     def train(self, train_X, train_y, val_X, val_y, model_class, hyperparamaters):
         # Finish this function so that it set up model then trains and saves it.
-        
+            
         self.batch_size = hyperparamaters['batch_size']
         self.lr = hyperparamaters['learning_rate']
         nlayers = hyperparamaters['number_layers']
         b = Batcher(train_X, train_y, self.device, batch_size=self.batch_size, max_iter=self.epochs)
-        input_s = self.batch_size, train_X.shape[1], train_X.shape[2]
-        output_s = self.batch_size, train_y.shape[1]
-        m = model_class(train_X.shape[2], nlayers, 1000, 103, self.device)
+        m = model_class(train_X.shape[2], nlayers, 1000, 103)
         m = m.to(self.device)    
         
-        m.train()
+        #m.train()
         self.val_X=val_X
         self.val_y=val_y
-        optimizer = optim.Adam(m.parameters(), lr=self.lr)
-        loss = nn.MSELoss()
-        #self.optimizer=hyperparamaters['optimizer']
+        if hyperparamaters['optimizer'] == "adam":
+            optimizer = optim.Adam(m.parameters(), lr=self.lr)
+        else:
+            optimizer = optim.SGD(m.parameters(), lr=self.lr)
+        loss = nn.L1Loss()
 
-        for e in range(self.epochs):
-            #h = m.init_hidden(self.batch_size)
-#             print('batch:', train_X.size(), train_y.size())
-#             tot_loss = 0
-#             optimizer.zero_grad()
-#             o = m(train_X.float())
-#             l = loss(o, train_y.float())
-#             tot_loss += l
-#             l.backward()
-#             optimizer.step()
-#            print("Total loss in epoch {} is {}.".format(e, tot_loss))
-            for split in b:
-                tot_loss = 0
-                for X, y in split:
-                    if(X.shape[0]==self.batch_size):
-                        optimizer.zero_grad()
-                        #X, y = Variable(torch.FloatTensor(X), requires_grad=False), Variable(torch.FloatTensor(y))
-                        o = m(X.float())
-                        #print(o)
-                        l = loss(o, y.float())
-                        tot_loss += l
-                        l.backward()
-                        optimizer.step()
+        e = 0
+        for split in b:
+            tot_loss = 0
+            for X, y in split:
+                optimizer.zero_grad()
+                o = m(X.float())
+                l = loss(o, y.float())
+                tot_loss += l
+                l.backward()
+                optimizer.step()
             print("Total loss in epoch {} is {}.".format(e, tot_loss))
+            e += 1
+        
         accuracy = 0
         recall = 0
         scores = [accuracy, recall]
@@ -130,5 +120,5 @@ class Trainer:
 
 
     def test(self, test_X, test_y, model_class, best_model_path):
-        # Finish this function so that it loads a model, test is and print results.
+        # Finish this function so that it loads a model, tests it and prints results.
         pass
