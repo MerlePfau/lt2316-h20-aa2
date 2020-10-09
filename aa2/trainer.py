@@ -5,6 +5,7 @@ import torch.nn as nn
 import torchtext as tt
 from torch.autograd import Variable
 import numpy as np
+from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_score
 
 class Batcher:
     def __init__(self, X, y, device, batch_size=50, max_iter=None):
@@ -36,7 +37,7 @@ class Trainer:
     def __init__(self, dump_folder="/tmp/aa2_models/"):
         self.dump_folder = dump_folder
         os.makedirs(dump_folder, exist_ok=True)
-        self.epochs = 50
+        self.epochs = 1
         self.device = torch.device('cuda:3')
         
         
@@ -81,41 +82,58 @@ class Trainer:
         self.batch_size = hyperparamaters['batch_size']
         self.lr = hyperparamaters['learning_rate']
         nlayers = hyperparamaters['number_layers']
+        model_name = hyperparamaters['model']
+        del hyperparamaters['model']
         b = Batcher(train_X, train_y, self.device, batch_size=self.batch_size, max_iter=self.epochs)
         m = model_class(train_X.shape[2], nlayers, 1000, 103)
         m = m.to(self.device)    
         
-        #m.train()
+        m.train()
         self.val_X=val_X
         self.val_y=val_y
         if hyperparamaters['optimizer'] == "adam":
             optimizer = optim.Adam(m.parameters(), lr=self.lr)
         else:
             optimizer = optim.SGD(m.parameters(), lr=self.lr)
-        loss = nn.L1Loss()
+        loss = nn.MSELoss()
 
         e = 0
         for split in b:
             tot_loss = 0
             for X, y in split:
                 optimizer.zero_grad()
-                o = m(X.float())
-                l = loss(o, y.float())
+                o = m(X.float(), self.device)
+                l = loss(o, y.float()).to(self.device)
                 tot_loss += l
                 l.backward()
                 optimizer.step()
             print("Total loss in epoch {} is {}.".format(e, tot_loss))
             e += 1
         
-        accuracy = 0
-        recall = 0
-        scores = [accuracy, recall]
-#        self.save_model(e, m, optimizer, loss, scores, hyperparamaters, 'model_1')
+        m.eval()
+        b = Batcher(self.val_X, self.val_y, self.device, batch_size=self.batch_size, max_iter=self.epochs)
+        y_true = []
+        y_pred = []
+        for split in b:
+            for X, y in split:
+                predictions = m(X.float(), self.device)
+                labels = y
+                for i in range(predictions.shape[0]):
+                    predict_sent = predictions[i].tolist()
+                    label_sent = labels[0].tolist()
+                    for j in range(len(predict_sent)):
+                        predict_tok = round(predict_sent[j])
+                        label_tok = label_sent[j]
+                        y_true.append(label_tok)
+                        y_pred.append(predict_tok)
+        accuracy = accuracy_score(y_true, y_pred, normalize=True)
+        recall = recall_score(y_true, y_pred, average='weighted')
+        precision = precision_score(y_true, y_pred, average='weighted')
+        f = f1_score(y_true, y_pred, average='weighted')
+        scores = {'accuracy:', accuracy, 'precision:', precision, 'recall:', recall, 'f1_score:', f}
+        print('accuracy:', accuracy, 'precision:', precision, 'recall:', recall, 'f1_score:', f)
+        self.save_model(e, m, optimizer, tot_loss, scores, hyperparamaters, model_name)
 
-#         with torch.no_grad():
-#             tag_scores = m(train_X.float())
-#             print('output dim:', tag_scores.shape)
-#             print('scores', tag_scores)
         pass
 
 
