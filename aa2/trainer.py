@@ -37,7 +37,7 @@ class Trainer:
     def __init__(self, dump_folder="/tmp/aa2_models/"):
         self.dump_folder = dump_folder
         os.makedirs(dump_folder, exist_ok=True)
-        self.epochs = 10
+        self.epochs = 100
         self.device = torch.device('cuda:3')
         
         
@@ -96,7 +96,7 @@ class Trainer:
         m = model_class(train_X.shape[2], nlayers, hidden_dim, 103)
         m = m.to(self.device)    
         
-        m.train()
+        
 
         if hyperparamaters['optimizer'] == "adam":
             optimizer = optim.Adam(m.parameters(), lr=self.lr)
@@ -106,6 +106,7 @@ class Trainer:
 
         e = 0
         for split in b:
+            m.train()
             tot_loss = 0
             for X, y in split:
                 optimizer.zero_grad()
@@ -113,41 +114,39 @@ class Trainer:
                 l = loss(o, y.float()).to(self.device)
                 tot_loss += l
                 l.backward()
-                optimizer.step()
-            print("Total loss in epoch {} is {}.".format(e, tot_loss))
+                optimizer.step()          
+        
+            self.val_X=val_X
+            self.val_y=val_y
+
+            m.eval()
+
+            bl = Batcher(self.val_X, self.val_y, self.device, batch_size=self.batch_size, max_iter=1)
+            y_true = []
+            y_pred = []
+            for split in bl:
+                for X, y in split:
+                    predictions = m(X.float(), self.device)
+                    labels = y
+                    for i in range(predictions.shape[0]):
+                        predict_sent = predictions[i].tolist()
+                        label_sent = labels[i].tolist()
+                        for j in range(len(predict_sent)):
+                            predict_tok = round(predict_sent[j])
+                            label_tok = label_sent[j]
+                            y_true.append(label_tok)
+                            y_pred.append(predict_tok)
+            scores = {}
+            accuracy = accuracy_score(y_true, y_pred, normalize=True)
+            scores['accuracy'] = accuracy
+            recall = recall_score(y_true, y_pred, average='weighted')
+            scores['recall'] = recall
+            precision = precision_score(y_true, y_pred, average='weighted')
+            scores['precision'] = precision
+            f = f1_score(y_true, y_pred, average='weighted')
+            scores['f1_score'] = f
+            print("{}: Total loss in epoch {} is: {}      |      F1 score in validation is: {}".format(model_name, e, tot_loss, f))
             e += 1
-        
-        self.val_X=val_X
-        self.val_y=val_y
-        
-        m.eval()
-        
-        b = Batcher(self.val_X, self.val_y, self.device, batch_size=self.batch_size, max_iter=1)
-        y_true = []
-        y_pred = []
-        for split in b:
-            for X, y in split:
-                predictions = m(X.float(), self.device)
-                labels = y
-                for i in range(predictions.shape[0]):
-                    predict_sent = predictions[i].tolist()
-                    label_sent = labels[i].tolist()
-                    for j in range(len(predict_sent)):
-                        predict_tok = round(predict_sent[j])
-                        label_tok = label_sent[j]
-                        y_true.append(label_tok)
-                        y_pred.append(predict_tok)
-        scores = {}
-        accuracy = accuracy_score(y_true, y_pred, normalize=True)
-        scores['accuracy'] = accuracy
-        recall = recall_score(y_true, y_pred, average='weighted')
-        scores['recall'] = recall
-        precision = precision_score(y_true, y_pred, average='weighted')
-        scores['precision'] = precision
-        f = f1_score(y_true, y_pred, average='weighted')
-        scores['f1_score'] = f
-        print('model:', model_name, 'accuracy:', accuracy, 'precision:', precision, 'recall:', recall, 'f1_score:', f)
-        
         self.save_model(e, m, optimizer, tot_loss, scores, hyperparamaters, model_name)
 
         pass
@@ -164,7 +163,13 @@ class Trainer:
         lr = trained_hyperparamaters['learning_rate']
         
         m = model_class(test_X.shape[2], nlayers, hidden_dim, 103)
+        
+        m.load_state_dict(model_state_dict)
+        
         m = m.to(self.device) 
+        
+        m.eval()
+        
         b = Batcher(test_X, test_y, self.device, batch_size, max_iter=1)
         
         y_true = []

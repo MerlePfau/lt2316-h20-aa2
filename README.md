@@ -17,11 +17,21 @@ The testing is similar to the evaluation, I load a model and get the same scores
 
 The parameters I chose were: "learning_rate", "hidden_size", "number_layers", "optimizer" and "batch_size". I tested some with the Adam optimizer and some with the SGD but couldn't see one outperforming the other.
 The parallel coordinates plot was not that helpful to me, as it got a bit messy and hard to read, so I relied more on my parameter definitions as well as the printing of all scores. I still relied on the same metric that I passed to it, the F1 score, since it combines some of the other scores I calculated.
-After the first five models were trained, I took the three best performing ones and slightly changed some variables. 
+All of my models seemed to get stuck in the training with the loss not significantly decreasing after the first few epochs. The f1 score when testing on the val set was still not bad, with mdoel 1 reaching 90,5%. I therefore chose to use that model for testing, but only reached a score of about 5%. Something seems to be going wrong, I have not figured out what it is though. I then tried training the model for way more epochs, and tried out e=100. This actually solved the getting stuck in the training for the model which has the smallest learning rate of 0.001. Therefore in the next part I tested out some more combinations of parameters with a smaller lr.
 
 ## Notes on Part 4.
 
-All of my models seemed to get stuck in the training with the loss not significantly decreasing after the first few epochs. The f1 score when testing on the val set was still not bad, with mdoel 1 reaching 90,5%. I therefore chose to use that model for testing, but only reached a score of about 5%. Something seems to be going wrong, I have not figured out what it is though.
+After the first five models were trained, I took the best performing one (model1 with a loss of 31.57 and an f1 score of 0.9616) and changed the learning rate, number of layers and hidden dimensions slightly to see if I could see an improvement in either loss or f1 score.
+The best model had a training loss of 24.02 and an F1 score in validation of 0.9677. 
+It had the hyperparameters: 
+                        "learning_rate": 0.002,
+                        "hidden_size": 100,
+                        "number_layers": 3,
+                        "optimizer": "adam",
+                        "batch_size": 25
+When tested with the unseen test data, it achieved the following scores:
+model6 accuracy: 0.9754955178510499 precision: 0.9766368120539154 recall: 0.9754955178510499 f1_score: 0.9760588655390093
+As you can see the f1 score is even a bit higher than in the training.
 
 ## Notes on Part Bonus.
 
